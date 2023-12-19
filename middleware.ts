@@ -13,9 +13,11 @@ let tldLocales = [
 ];
 
 function getDomainLocale(hostname: string) {
+  console.log("hostname", hostname);
   const { locale } = tldLocales.find(({ tld }) => hostname.includes(tld)) || {
     locale: defaultLocale,
   };
+  console.log("locale", locale);
 
   return locale;
 }
