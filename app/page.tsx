@@ -1,13 +1,11 @@
 import styles from "./page.module.css";
 import { getDictionary } from "./dictionaries";
+import { headers } from "next/headers";
 
-type Props = {
-  params: {
-    lang: string;
-  };
-};
+export default async function Home() {
+  const headersList = headers();
+  const lang = headersList.get("X-Selected-Language")!!;
 
-export default async function Home({ params: { lang } }: Props) {
   const dict = await getDictionary(lang);
 
   return (

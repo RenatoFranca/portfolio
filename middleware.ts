@@ -1,41 +1,39 @@
-import { match } from "@formatjs/intl-localematcher";
-import Negotiator from "negotiator";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-let locales = ["en-US", "pt-PT", "pt-BR"];
+let defaultLocale = process.env.DEBUG_LANGUAGE || "en";
+let tldLocales = [
+  {
+    tld: ".com",
+    locale: "en",
+  },
+  {
+    tld: ".com.br",
+    locale: "pt-br",
+  },
+];
 
-function getLocale(request: NextRequest) {
-  let headers = { "accept-language": "pt-BR,pt;q=0.5" };
-  let languages = new Negotiator({ headers }).languages();
-  let defaultLocale = "pt-BR";
+function getDomainLocale(hostname: string) {
+  const { locale } = tldLocales.find(({ tld }) => hostname.includes(tld)) || {
+    locale: defaultLocale,
+  };
 
-  return match(languages, locales, defaultLocale);
+  return locale;
 }
 
 export function middleware(request: NextRequest) {
-  // Check if there is any supported locale in the pathname
-  const { pathname } = request.nextUrl;
-  const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-  );
+  const selectedLanguage = request.headers.get("X-Selected-Language");
+  const { hostname } = request.nextUrl;
 
-  console.log("pathname", pathname);
-  console.log("locales", locales);
-  console.log("pathnameHasLocale", pathnameHasLocale);
+  const domainLocale = getDomainLocale(hostname);
 
-  if (pathnameHasLocale) return;
+  if (domainLocale === selectedLanguage) {
+    return;
+  }
 
-  // Redirect if there is no locale
-  const locale = getLocale(request);
+  let response = NextResponse.next();
+  response.headers.set("X-Selected-Language", domainLocale);
 
-  console.log("locale", locale);
-  console.log("pathname", pathname);
-  console.log("request.nextUrl", request.nextUrl);
-
-  request.nextUrl.pathname = `/${locale}${pathname}`;
-  // e.g. incoming request is /products
-  // The new URL is now /en-US/products
-  return Response.redirect(request.nextUrl);
+  return response;
 }
 
 export const config = {
